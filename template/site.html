@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Acme Portal</title>
+<style>
+  :root{--bg:#eef1f6;--card:#fff;--soft:#f5f7fa;--ink:#141824;--muted:#6b7280;--line:#e3e7ee;--brand:#2f6df6;--brand-soft:#e6efff;--ok:#15a46a;--bad:#e5384f}
+  @media (prefers-color-scheme:dark){:root{--bg:#0c0e13;--card:#161a22;--soft:#1b2029;--ink:#eef1f7;--muted:#9aa3b2;--line:#262c38;--brand:#5b8bff;--brand-soft:#1a2438;--ok:#33c98a;--bad:#ff5b70}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  header{display:flex;align-items:center;gap:14px;padding:14px 22px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  .logo{width:30px;height:30px;border-radius:8px;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:800}
+  header b{font-size:17px}.spacer{flex:1}
+  .who{font-size:13px;color:var(--muted)}
+  main{max-width:960px;margin:0 auto;padding:24px 18px 60px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .card h2{margin:0 0 4px;font-size:15px}.card p.hint{margin:0 0 12px;color:var(--muted);font-size:12.5px}
+  label{display:block;font-size:12.5px;color:var(--muted);margin:10px 0 4px}
+  input,textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+  textarea{min-height:64px;resize:vertical}
+  button{font:inherit;font-weight:600;border:0;border-radius:9px;padding:9px 15px;background:var(--brand);color:#fff;cursor:pointer;margin-top:12px}
+  button.ghost{background:var(--brand-soft);color:var(--brand)}
+  .out{margin-top:12px;background:var(--soft);border:1px solid var(--line);border-radius:9px;padding:11px;font:12.5px/1.55 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow:auto;display:none}
+  .out.show{display:block}
+  .login-wrap{max-width:380px;margin:9vh auto 0}
+  .pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;background:var(--brand-soft);color:var(--brand);margin-left:8px}
+  .msg{padding:10px 12px;border-radius:9px;margin:8px 0;font-size:13px;white-space:pre-wrap}
+  .msg.u{background:var(--brand-soft)}.msg.a{background:var(--soft);border:1px solid var(--line)}
+  .note{color:var(--muted);font-size:12px;margin-top:22px;text-align:center}
+  .banner{background:var(--brand-soft);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:12px;padding:14px 16px;margin-bottom:20px;font-size:13px;line-height:1.65}
+  a{color:var(--brand)}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">A</div>
+  <b>Acme Portal</b>
+  <span class="pill" id="envPill">synthetic demo data</span>
+  <div class="spacer"></div>
+  <span class="who" id="who"></span>
+  <button class="ghost" id="logoutBtn" style="display:none;margin:0">Sign out</button>
+</header>
+<main>
+  <div class="banner">
+    <b>What is this?</b> The Acme Portal is a small, <b>deliberately vulnerable</b> company app with fake data.
+    It is the exact app the Arena's AI <b>attacker agents try to break</b> and the <b>defender agents patch</b> live — the dashboard runs on port 5001, this target app on 5002.
+    Sign in as any demo user and use it like a normal site. To see a weakness by hand: sign in as <b>jamie</b>, then in <b>Account profile</b> change the id to <b>morgan</b> and view it — on the naive app you'd see another company's account.
+  </div>
+  <!-- Login view -->
+  <section id="loginView" class="login-wrap">
+    <div class="card">
+      <h2>Sign in</h2>
+      <p class="hint">Demo identities below. The password is the same for all of them in this lab.</p>
+      <label for="u">User</label>
+      <select id="u">
+        <option value="jamie">jamie — Northstar customer</option>
+        <option value="morgan">morgan — Meridian customer</option>
+        <option value="priya">priya — Acme finance</option>
+        <option value="alex">alex — Acme support</option>
+        <option value="robin">robin — Acme HR</option>
+      </select>
+      <label for="p">Password</label>
+      <input id="p" type="password" value="Arena-demo-2026!">
+      <button id="loginBtn">Sign in</button>
+      <div id="loginOut" class="out"></div>
+    </div>
+    <p class="note">This is a deliberately vulnerable practice app. All records are synthetic.</p>
+  </section>
+
+  <!-- App view -->
+  <section id="appView" style="display:none">
+    <div class="grid">
+      <div class="card">
+        <h2>Search documents</h2>
+        <p class="hint">GET /search — looks up documents by title.</p>
+        <label for="q">Title contains</label>
+        <input id="q" placeholder="billing" value="billing">
+        <button id="searchBtn">Search</button>
+        <div id="searchOut" class="out"></div>
+      </div>
+
+      <div class="card">
+        <h2>Look up an invoice</h2>
+        <p class="hint">GET /invoices/&lt;id&gt; — your own invoices only.</p>
+        <label for="inv">Invoice id</label>
+        <input id="inv" value="NS-1042">
+        <button id="invBtn">Open invoice</button>
+        <div id="invOut" class="out"></div>
+      </div>
+
+      <div class="card">
+        <h2>Account profile</h2>
+        <p class="hint">GET /account/&lt;id&gt; — your account and invoices.</p>
+        <label for="acc">Account id</label>
+        <input id="acc" value="jamie">
+        <button id="accBtn">View account</button>
+        <div id="accOut" class="out"></div>
+      </div>
+
+      <div class="card">
+        <h2>Download a file</h2>
+        <p class="hint">GET /download?file= — public help files.</p>
+        <label for="file">File name</label>
+        <input id="file" value="guide.txt">
+        <button id="fileBtn">Download</button>
+        <div id="fileOut" class="out"></div>
+      </div>
+
+      <div class="card" style="grid-column:1/-1">
+        <h2>Company assistant</h2>
+        <p class="hint">POST /chat — answers from records you are authorized to see.</p>
+        <div id="chatLog"></div>
+        <label for="msg">Message</label>
+        <textarea id="msg" placeholder="What is my latest invoice amount and due date?"></textarea>
+        <button id="chatBtn">Send</button>
+      </div>
+    </div>
+    <p class="note">Endpoints return JSON; this page is a thin client over them. Switch identity by signing out.</p>
+  </section>
+</main>
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+let csrf='';
+// Optional attack-sandbox context: a bot can point the whole UI at an isolated DB copy
+// running a specific defense policy, so the vulnerable "before" state is visible in a real browser.
+const CTX=new URLSearchParams(location.search).get('ctx')||'';
+if(CTX){const pill=$('#envPill');pill.textContent='attack sandbox';pill.style.background='#ffe0e0';pill.style.color='#b00020';}
+async function call(method,path,body){
+  const opt={method,headers:{},credentials:'same-origin'};
+  if(CTX)opt.headers['X-Arena-Context']=CTX;
+  if(body!==undefined){opt.headers['Content-Type']='application/json';opt.body=JSON.stringify(body);}
+  if(method!=='GET'&&csrf)opt.headers['X-CSRF-Token']=csrf;
+  const r=await fetch(path,opt);
+  let data;try{data=await r.json();}catch(e){data={raw:await r.text()};}
+  return {status:r.status,data};
+}
+function show(el,res){el.classList.add('show');el.textContent=`HTTP ${res.status}\n`+JSON.stringify(res.data,null,2);}
+function setSignedIn(user){
+  $('#loginView').style.display='none';$('#appView').style.display='block';
+  $('#who').textContent=`${user.display_name} · ${user.organization_id} · ${user.role} · clearance ${user.clearance}`;
+  $('#logoutBtn').style.display='inline-block';$('#acc').value=user.id;
+}
+$('#loginBtn').onclick=async()=>{
+  const res=await call('POST','/login',{username:$('#u').value,password:$('#p').value});
+  if(res.status===200){csrf=res.data.csrf||'';setSignedIn(res.data.user);}
+  else show($('#loginOut'),res);
+};
+$('#logoutBtn').onclick=()=>location.reload();
+$('#searchBtn').onclick=async()=>show($('#searchOut'),await call('GET','/search?q='+encodeURIComponent($('#q').value)));
+$('#invBtn').onclick=async()=>show($('#invOut'),await call('GET','/invoices/'+encodeURIComponent($('#inv').value)));
+$('#accBtn').onclick=async()=>show($('#accOut'),await call('GET','/account/'+encodeURIComponent($('#acc').value)));
+$('#fileBtn').onclick=async()=>show($('#fileOut'),await call('GET','/download?file='+encodeURIComponent($('#file').value)));
+function bubble(text,cls){const d=document.createElement('div');d.className='msg '+cls;d.textContent=text;$('#chatLog').append(d);d.scrollIntoView({block:'nearest'});}
+$('#chatBtn').onclick=async()=>{
+  const m=$('#msg').value.trim();if(!m)return;$('#msg').value='';bubble(m,'u');
+  const res=await call('POST','/chat',{message:m});
+  bubble(res.status===200?res.data.reply:(res.data.error||('HTTP '+res.status)),'a');
+};
+</script>
+</body>
+</html>

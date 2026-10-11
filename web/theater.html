@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Attack Theater</title>
+<style>
+  :root{--bg:#0b0d12;--panel:#141822;--chrome:#1b2130;--soft:#10141d;--ink:#eef1f7;--muted:#8b93a3;--line:#262d3b;
+    --idle:#3a4150;--amber:#f0a729;--red:#ff5b70;--green:#33c98a;--brand:#ff7a3d;
+    --mono:ui-monospace,"JetBrains Mono",Consolas,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+  .bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  .bar h1{font-size:15px;margin:0}
+  .bar .tgt{font:12px var(--mono);color:var(--muted)}
+  .spacer{flex:1}
+  .stat{font-size:12px;color:var(--muted)}.stat b{color:var(--ink);font-size:15px}
+  .legend{display:flex;gap:12px;font-size:11px;color:var(--muted);align-items:center}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;padding:16px}
+  .win{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;border-top:3px solid var(--idle);transition:border-color .25s,box-shadow .25s}
+  .win.attacking{border-top-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
+  .win.red{border-top-color:var(--red);box-shadow:0 0 18px -4px var(--red)}
+  .win.green{border-top-color:var(--green);box-shadow:0 0 18px -6px var(--green)}
+  .chrome{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--chrome);border-bottom:1px solid var(--line)}
+  .lights{display:flex;gap:5px}.lights i{width:9px;height:9px;border-radius:50%;background:#394052;display:block}
+  .addr{flex:1;background:var(--soft);border-radius:7px;padding:4px 9px;font:11px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fam{font-size:12px;font-weight:700;padding:3px 9px 10px;display:flex;justify-content:space-between;align-items:baseline}
+  .fam small{color:var(--muted);font-weight:500}
+  .view{padding:0 11px 11px}
+  .reqline{font:11.5px var(--mono);color:#cbd3e1;background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:8px;min-height:38px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:110px;overflow:auto}
+  .resp{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11.5px;color:var(--muted)}
+  .code{font:11px var(--mono);padding:1px 6px;border-radius:5px;background:var(--soft);border:1px solid var(--line)}
+  .verdict{margin-left:auto;font-weight:700;font-size:11px;padding:2px 9px;border-radius:20px}
+  .verdict.red{background:rgba(255,91,112,.16);color:var(--red)}
+  .verdict.green{background:rgba(51,201,138,.16);color:var(--green)}
+  .verdict.idle{background:var(--soft);color:var(--muted)}
+  .count{font-size:10.5px;color:var(--muted);margin-top:6px}
+  .siterow{padding:0 16px 18px}
+  .siteframe{width:100%;height:300px;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .sitecap{font-size:11px;color:var(--muted);margin:14px 2px 7px;display:flex;align-items:center;gap:8px}
+  .wait{padding:40px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="bar">
+  <h1>Attack Theater</h1>
+  <span class="tgt">target http://127.0.0.1:5002</span>
+  <div class="spacer"></div>
+  <span class="stat">Round <b id="round">0</b></span>
+  <span class="stat">Phase <b id="phase">—</b></span>
+  <span class="stat">Blocked <b id="blocked">0</b> / <b id="total">0</b></span>
+  <div class="legend">
+    <span><i class="dot" style="background:var(--idle)"></i>idle</span>
+    <span><i class="dot" style="background:var(--amber)"></i>attacking</span>
+    <span><i class="dot" style="background:var(--red)"></i>broke in</span>
+    <span><i class="dot" style="background:var(--green)"></i>blocked</span>
+  </div>
+</div>
+<div id="status" class="wait">Waiting for the live run to begin…</div>
+<div class="grid" id="grid"></div>
+<div class="siterow">
+  <div class="sitecap"><i class="dot" style="background:var(--brand)"></i>The live target app the agents are attacking — browse it yourself:</div>
+  <iframe class="siteframe" src="http://127.0.0.1:5002/" title="Acme Portal"></iframe>
+</div>
+<script>
+'use strict';
+const FAMS=[
+  {k:'login',n:'Login abuse',ep:'/login',d:'brute force / stuffing'},
+  {k:'flood',n:'Request flood',ep:'/profile',d:'volumetric'},
+  {k:'sqli',n:'SQL injection',ep:'/search?q=',d:'predicate injection'},
+  {k:'xss',n:'Cross-site scripting',ep:'/profile?name=',d:'reflected marker'},
+  {k:'prompt',n:'Prompt injection',ep:'/chat',d:'assistant extraction'},
+  {k:'access',n:'Broken access',ep:'/account/',d:'cross-tenant / IDOR'},
+  {k:'csrf',n:'CSRF',ep:'/account/jamie',d:'forged state change'},
+  {k:'token',n:'Token forgery',ep:'/api/me',d:'JWT tampering'},
+  {k:'traversal',n:'Path traversal',ep:'/download?file=',d:'escape the file root'},
+  {k:'enumeration',n:'User enumeration',ep:'/reset',d:'account probing'},
+];
+const esc=s=>String(s??'');
+const $=s=>document.querySelector(s);
+const grid=$('#grid');const tiles={};
+for(const f of FAMS){
+  const el=document.createElement('div');el.className='win';el.id='win-'+f.k;
+  el.innerHTML=`<div class="chrome"><span class="lights"><i></i><i></i><i></i></span><span class="addr">127.0.0.1:5002${esc(f.ep)}</span></div>
+    <div class="fam">${esc(f.n)} <small>${esc(f.d)}</small></div>
+    <div class="view">
+      <div class="reqline">idle</div>
+      <div class="resp"><span class="code status">—</span><span class="hint"></span><span class="verdict idle">idle</span></div>
+      <div class="count"></div>
+    </div>`;
+  grid.append(el);tiles[f.k]={el,req:el.querySelector('.reqline'),status:el.querySelector('.status'),hint:el.querySelector('.hint'),verdict:el.querySelector('.verdict'),count:el.querySelector('.count'),hits:0,breaks:0};
+}
+let blocked=0,total=0;
+function setStat(){$('#blocked').textContent=blocked;$('#total').textContent=total;}
+function render(res,phase){
+  const t=tiles[res.family];if(!t)return;
+  t.hits++;
+  const ev=res.evidence||{};
+  const addr=t.el.querySelector('.addr');
+  if(ev.path)addr.textContent='127.0.0.1:5002'+ev.path+(res.payload&&ev.method==='GET'?('?…'):'');
+  const payload=res.payload||res.id||'';
+  t.req.textContent=(ev.method||'')+' '+(ev.path||'')+(payload?('\n'+payload):'');
+  t.status.textContent=ev.status!=null?ev.status:'—';
+  const o=res.outcome;
+  t.el.classList.remove('attacking','red','green');
+  t.verdict.classList.remove('idle','red','green');
+  if(o==='compromised'){t.breaks++;t.el.classList.add('red');t.verdict.classList.add('red');t.verdict.textContent='BROKE IN';t.hint.textContent=ev.body&&ev.body.unauthorized_count?(ev.body.unauthorized_count+' unauthorized records'):'defense bypassed';}
+  else if(o==='blocked'){blocked++;t.el.classList.add('green');t.verdict.classList.add('green');t.verdict.textContent='BLOCKED';t.hint.textContent='defense held';}
+  else{t.el.classList.add('attacking');t.verdict.classList.add('idle');t.verdict.textContent=esc(o);t.hint.textContent=esc(o);}
+  if(o==='blocked'||o==='compromised')total++;
+  t.count.textContent=`${t.hits} attempt${t.hits>1?'s':''} · ${t.breaks} break-in${t.breaks===1?'':'s'} · last phase: ${esc(phase||'')}`;
+  setStat();
+}
+function recount(){blocked=0;total=0;for(const k in tiles){/* keep cumulative across phases */}}
+const params=new URLSearchParams(location.search);
+const run=params.get('run');
+if(!run){$('#status').textContent='No run id supplied.';}
+else{
+  $('#status').style.display='none';
+  const stream=new EventSource('/api/events/'+run);
+  stream.onmessage=e=>{
+    const ev=JSON.parse(e.data);
+    if(ev.type==='strategy_selected'){$('#round').textContent=ev.round;}
+    if(ev.type==='attack_completed'){$('#phase').textContent=ev.phase||'';render(ev.result,ev.phase);}
+    if(ev.type==='round_scored'){$('#round').textContent=ev.round.round;}
+    if(['run_completed','run_failed','run_stopped'].includes(ev.type)){$('#phase').textContent=ev.type==='run_completed'?'complete':ev.type.replace('run_','');stream.close();}
+  };
+  stream.onerror=()=>{};
+}
+</script>
+</body>
+</html>

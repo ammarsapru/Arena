@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Injection Arena — Live</title>
+<style>
+  :root{
+    --bg:#0c0f15; --panel:#141921; --panel2:#1a2029; --line:#28303c;
+    --fg:#e8eef5; --muted:#8793a4; --accent:#5cb8ff;
+    --red:#ff5a6a; --green:#39d98a; --amber:#ffbd4a; --purple:#b98cff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace; --sans:"Inter",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box} html,body{margin:0}
+  body{background:var(--bg);color:var(--fg);font-family:var(--sans);line-height:1.5}
+  .wrap{max-width:1280px;margin:0 auto;padding:18px}
+  header{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  h1{font-size:18px;margin:0}
+  .mode{font:600 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;
+    border:1px solid var(--line);border-radius:999px;padding:5px 10px;color:var(--accent)}
+  .secret{font:600 12px var(--mono);color:var(--red);margin-left:auto}
+  .ctl{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0}
+  button{font:600 13px var(--sans);border-radius:9px;padding:10px 18px;cursor:pointer;border:1px solid var(--line)}
+  #start{background:var(--accent);color:#05121f;border:none}#start:disabled{opacity:.4;cursor:default}
+  .reset{background:transparent;color:var(--muted)}
+  select{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:9px;font:13px var(--sans)}
+
+  .counters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .ct{flex:1;min-width:110px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 13px}
+  .ct .n{font:700 22px var(--mono);font-variant-numeric:tabular-nums}.ct .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .ct.red .n{color:var(--red)}.ct.green .n{color:var(--green)}.ct.blue .n{color:var(--accent)}
+  .trend{display:flex;align-items:flex-end;gap:5px;height:34px;margin-top:6px}
+  .trend .b{width:16px;background:var(--red);border-radius:3px 3px 0 0;transition:height .4s}
+  .trend .b.zero{background:var(--green);height:4px!important}
+
+  .cols{display:grid;grid-template-columns:260px 1fr 340px;gap:14px}
+  @media (max-width:980px){.cols{grid-template-columns:1fr}}
+  .col{background:var(--panel);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;min-height:460px;max-height:620px;overflow:hidden}
+  .ch{padding:11px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+  .ch .d{width:8px;height:8px;border-radius:50%}
+  .ch.atk .d{background:var(--red)}.ch.tgt .d{background:var(--green)}.ch.def .d{background:var(--accent)}
+  .ch .t{font:600 13px var(--sans)}.ch .s{font:10px var(--mono);color:var(--muted);margin-left:auto}
+  .ch.tgt.breached .d{background:var(--red)}
+  .cb{flex:1;overflow-y:auto;padding:13px;display:flex;flex-direction:column;gap:9px}
+  .empty{margin:auto;color:var(--muted);font-size:12.5px;text-align:center;max-width:200px}
+
+  .rd{font:600 10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+    border-top:1px dashed var(--line);padding-top:8px;margin-top:4px}
+  .pick{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--red);border-radius:8px;padding:9px 10px;animation:in .3s}
+  .pick .k{font:600 12px var(--sans)}.pick .p{font-size:11px;color:var(--muted);margin-top:1px}
+
+  .msg{max-width:94%;min-width:0;animation:in .3s}
+  .msg .who{font:600 9px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+  .msg .fam{font-size:10px;color:var(--red);margin-bottom:3px}
+  .bub{border-radius:9px;padding:8px 10px;font-size:12.5px;word-break:break-word}
+  .atkmsg{align-self:flex-end}.atkmsg .who{text-align:right}
+  .atkmsg .bub{background:var(--panel2);border:1px solid var(--line);font:12px var(--mono)}
+  .botmsg .bub{background:#10351f1f;border:1px solid var(--green)}
+  .botmsg.leak .bub{background:#3a0f151f;border:1px solid var(--red)}
+  .botmsg.refuse .bub{background:var(--panel2);border:1px solid var(--amber);color:var(--amber)}
+  .botmsg.block .bub{background:var(--panel2);border:1px dashed var(--line);color:var(--muted);font-style:italic}
+  .v{font:600 10px var(--mono);margin-top:4px}.leak .v{color:var(--red)}.botmsg.block .v{color:var(--amber)}.refuse .v{color:var(--amber)}.served .v{color:var(--green)}
+  .skey{color:var(--red);font-weight:700}
+
+  .review{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12.5px;animation:in .3s}
+  .review .t{font:600 10px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--accent);margin-bottom:4px}
+  pre{margin:0;background:#070a0e;border:1px solid var(--line);border-radius:8px;padding:11px;overflow-x:auto;
+    font:11px/1.55 var(--mono);color:var(--fg);animation:glow 1s}
+  .kw{color:var(--accent)}.str{color:var(--green)}.cm{color:var(--muted)}
+  @keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @keyframes glow{from{border-color:var(--accent);box-shadow:0 0 0 2px #5cb8ff33}to{}}
+</style></head><body>
+<div class="wrap">
+  <header>
+    <h1>⚔ Injection Arena</h1>
+    <span class="mode" id="mode">mock</span>
+    <span class="secret" id="secret">secret: —</span>
+  </header>
+
+  <div class="ctl">
+    <button id="start">▶ Run arms race</button>
+    <label style="font-size:13px;color:var(--muted)">rounds
+      <select id="rounds"><option>4</option><option selected>5</option><option>6</option><option>7</option></select>
+    </label>
+    <button class="reset" id="reset">↺ Reset</button>
+    <span id="phase" style="font:12px var(--mono);color:var(--muted)"></span>
+  </div>
+
+  <div class="counters">
+    <div class="ct"><div class="n" id="cRound">0</div><div class="l">Round</div></div>
+    <div class="ct red"><div class="n" id="cLeak">0</div><div class="l">Leaks this round</div></div>
+    <div class="ct green"><div class="n" id="cBlock">0</div><div class="l">Blocked</div></div>
+    <div class="ct blue"><div class="n" id="cServed">0</div><div class="l">Real users served</div></div>
+    <div class="ct"><div class="l">Leaks per round</div><div class="trend" id="trend"></div></div>
+  </div>
+
+  <div class="cols">
+    <div class="col"><div class="ch atk"><span class="d"></span><span class="t">Attacker Agent</span><span class="s">red team</span></div>
+      <div class="cb" id="atk"><div class="empty">Each round this agent picks a different mix of attack patterns — exploiting whatever leaked last time.</div></div></div>
+    <div class="col"><div class="ch tgt" id="tgtHead"><span class="d"></span><span class="t">Acme SupportBot</span><span class="s" id="tgtTag">unprotected</span></div>
+      <div class="cb" id="tgt"><div class="empty">The live chatbot under attack. Attacks that slip past the defense reach it here.</div></div></div>
+    <div class="col"><div class="ch def"><span class="d"></span><span class="t">Defense Agent</span><span class="s">blue team</span></div>
+      <div class="cb" id="def"><div class="empty">Reviews what leaked, then rewrites its detector live. The code appears here and grows each round.</div></div></div>
+  </div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const atk=$("#atk"),tgt=$("#tgt"),def=$("#def");
+let SECRET="";
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const mark=s=>{let e=esc(s);return SECRET?e.replace(new RegExp(SECRET,'g'),`<span class="skey">${SECRET}</span>`):e;};
+const hl=c=>esc(c).replace(/\b(def|return|if|not|any|in|for|and|or|pass|import)\b/g,'<span class="kw">$1</span>')
+  .replace(/(&quot;[^&]*&quot;|"[^"]*")/g,'<span class="str">$1</span>').replace(/(#.*)$/gm,'<span class="cm">$1</span>');
+function clr(el,txt){el.innerHTML=`<div class="empty">${txt}</div>`;}
+function add(el,html){const d=document.createElement("div");d.innerHTML=html;el.appendChild(d.firstElementChild);el.scrollTop=el.scrollHeight;return el.lastElementChild;}
+function rdiv(el,r){add(el,`<div class="rd">Round ${r}</div>`);}
+
+let es=null;
+function reset(){
+  if(es){es.close();es=null;}
+  clr(atk,"Each round this agent picks a different mix of attack patterns — exploiting whatever leaked last time.");
+  clr(tgt,"The live chatbot under attack. Attacks that slip past the defense reach it here.");
+  clr(def,"Reviews what leaked, then rewrites its detector live. The code appears here and grows each round.");
+  $("#cRound").textContent=0;$("#cLeak").textContent=0;$("#cBlock").textContent=0;$("#cServed").textContent=0;
+  $("#trend").innerHTML="";$("#phase").textContent="";
+  $("#tgtHead").classList.remove("breached");$("#tgtTag").textContent="unprotected";
+  $("#start").disabled=false;
+}
+$("#reset").onclick=reset;
+
+$("#start").onclick=()=>{
+  reset();$("#start").disabled=true;
+  const rounds=$("#rounds").value;
+  es=new EventSource(`/run?rounds=${rounds}`);
+  let firstPick=true, servedTotal=0;
+  es.onmessage=e=>{
+    const m=JSON.parse(e.data);
+    if(m.type==="secret"){SECRET=m.value;$("#secret").textContent="protecting: "+m.value;$("#mode").textContent=m.mode;}
+    if(m.type==="round_start"){$("#cRound").textContent=m.round;$("#phase").textContent=`round ${m.round} · attacker choosing…`;
+      rdiv(atk,m.round);rdiv(tgt,m.round);$("#cLeak").textContent=0;$("#cBlock").textContent=0;}
+    if(m.type==="attacker_think"){
+      m.families.forEach(f=>add(atk,`<div class="pick"><div class="k">${f.label}</div><div class="p">${f.plain}</div></div>`));
+      $("#phase").textContent=`round ${m.round} · launching ${m.families.length} attacks`;
+    }
+    if(m.type==="attack_launch"){
+      add(tgt,`<div class="msg atkmsg"><div class="who">Attacker</div><div class="fam">${m.label}</div><div class="bub">${esc(m.payload)}</div></div>`);
+    }
+    if(m.type==="attack_result"){
+      if(m.outcome==="blocked")
+        add(tgt,`<div class="msg botmsg block"><div class="who">🛡 Defense</div><div class="bub">Blocked before reaching the bot.</div><div class="v">■ BLOCKED</div></div>`);
+      else if(m.outcome==="leaked")
+        add(tgt,`<div class="msg botmsg leak"><div class="who">SupportBot</div><div class="bub">${mark(m.reply)}</div><div class="v">✗ SECRET LEAKED</div></div>`);
+      else
+        add(tgt,`<div class="msg botmsg refuse"><div class="who">SupportBot</div><div class="bub">${mark(m.reply)}</div><div class="v">⚠ refused — no leak</div></div>`);
+    }
+    if(m.type==="benign_result"){
+      add(tgt,`<div class="msg atkmsg" style="--x:0"><div class="who" style="color:var(--green)">Real customer</div><div class="bub" style="font-family:var(--sans)">${esc(m.payload)}</div></div>`);
+      if(m.outcome==="served"){servedTotal++;$("#cServed").textContent=servedTotal;
+        add(tgt,`<div class="msg botmsg served"><div class="who">SupportBot</div><div class="bub">${esc(m.reply)}</div><div class="v">✓ served</div></div>`);}
+      else add(tgt,`<div class="msg botmsg block"><div class="who">🛡 Defense</div><div class="bub">Real customer wrongly blocked!</div><div class="v" style="color:var(--red)">✗ false block</div></div>`);
+    }
+    if(m.type==="round_result"){
+      $("#cLeak").textContent=m.leaks;$("#cBlock").textContent=m.blocks;
+      $("#tgtHead").classList.toggle("breached",m.leaks>0);
+      $("#tgtTag").textContent=m.leaks>0?"breached":"holding";
+      const mx=Math.max(1,...m.history.map(h=>h.leaks));
+      $("#trend").innerHTML=m.history.map(h=>`<div class="b ${h.leaks===0?'zero':''}" style="height:${h.leaks/mx*34}px" title="r${h.round}: ${h.leaks}"></div>`).join("");
+    }
+    if(m.type==="defender_review"){
+      rdiv(def,m.round);
+      add(def,`<div class="review"><div class="t">reviewing gaps</div>${esc(m.note)}</div>`);
+      $("#phase").textContent=`round ${m.round} · defender patching…`;
+    }
+    if(m.type==="defender_patch"){
+      add(def,`<pre>${hl(m.code)}</pre>`);
+    }
+    if(m.type==="done"){
+      $("#phase").textContent="done — defense converged";$("#start").disabled=false;es.close();
+    }
+  };
+  es.onerror=()=>{$("#phase").textContent="connection ended";$("#start").disabled=false;if(es)es.close();};
+};
+</script>
+</body></html>
